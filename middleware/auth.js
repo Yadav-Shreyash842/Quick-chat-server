@@ -1,7 +1,7 @@
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 
-// Middleware to protect routes
+
 export const protectRoute = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
@@ -12,10 +12,9 @@ export const protectRoute = async (req, res, next) => {
 
     const token = authHeader.split(" ")[1];
 
-    // Decode JWT → we used { id: user._id } while generating token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    const userId = decoded.id;  // <-- FIXED ✔ (correct source)
+    const userId = decoded.id;  
 
     const user = await User.findById(userId).select("-password");
 
