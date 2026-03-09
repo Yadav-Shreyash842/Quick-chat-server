@@ -6,6 +6,7 @@ import { connectDB } from "./lib/db.js";
 import userRouter from "./routes/userRoutes.js";
 import messageRoutes from "./routes/messageRoutes.js";
 import { Server } from "socket.io";
+import User from "./models/User.js";
 
 // create express app and http server
 const app = express();
@@ -44,14 +45,32 @@ io.on("connection", (socket) => {
    * payload: { to, offer, type }
    * type: "audio" | "video"
    */
-  socket.on("call-user", ({ to, offer, type }) => {
+  socket.on("call-user", async ({ to, offer, type }) => {
     const toSocketId = userSocketMap[to];
     if (toSocketId) {
-      io.to(toSocketId).emit("incoming-call", {
-        from: userId,
-        offer,
-        type, // 🔥 audio / video
-      });
+      // Fetch caller's details to send with the incoming call
+      try {
+        const caller = await User.findById(userId).select("fullName profilePic");
+        io.to(toSocketId).emit("incoming-call", {
+          from: userId,
+          offer,
+          type, // 🔥 audio / video
+          caller: caller ? { 
+            _id: userId,
+            fullName: caller.fullName, 
+            profilePic: caller.profilePic 
+          } : null,
+        });
+      } catch (error) {
+        console.error("Error fetching caller details:", error);
+        // Send without caller details if there's an error
+        io.to(toSocketId).emit("incoming-call", {
+          from: userId,
+          offer,
+          type,
+          caller: null,
+        });
+      }
     }
   });
 
