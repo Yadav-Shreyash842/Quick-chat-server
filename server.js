@@ -6,6 +6,7 @@ import userRouter from "./routes/userRoutes.js";
 import messageRoutes from "./routes/messageRoutes.js";
 import groupRoutes from "./routes/groupRoutes.js";
 import User from "./models/User.js";
+import Group from "./models/Group.js";
 import { app, server, io, userSocketMap } from "./lib/socket.js";
 
 // middlewares
@@ -85,7 +86,7 @@ io.on("connection", (socket) => {
 
   socket.on("group-call-ended", async ({ groupId, callId }) => {
     try {
-      const group = await (await import("./models/Group.js")).default.findById(groupId);
+      const group = await Group.findById(groupId);
       if (group) {
         group.members.forEach((memberId) => {
           const sid = userSocketMap[memberId.toString()];
