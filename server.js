@@ -34,7 +34,7 @@ io.on("connection", (socket) => {
         const caller = await User.findById(userId).select("fullName profilePic");
         io.to(toSocketId).emit("incoming-call", {
           from: userId, offer, type,
-          caller: caller ? { _id: userId, fullName: caller.fullName, profilePic: caller.profilePic } : null,
+          caller: caller ? { _id: userId, fullName: caller.fullName, profilePic: caller.profilePic } : null, 
         });
       } catch (error) {
         console.error("Error fetching caller details:", error);
@@ -68,7 +68,6 @@ io.on("connection", (socket) => {
   });
 
   // ── GROUP CALL SIGNALING ──
-  // mesh: each pair exchanges offer/answer directly via server relay
   socket.on("group-call-offer", ({ to, offer, type, callId, from }) => {
     const toSocketId = userSocketMap[to];
     if (toSocketId) io.to(toSocketId).emit("group-call-offer", { from, offer, type, callId });
@@ -84,13 +83,19 @@ io.on("connection", (socket) => {
     if (toSocketId) io.to(toSocketId).emit("group-ice-candidate", { from, candidate });
   });
 
+  // receiver tells initiator "I am ready, send me your offer now"
+  socket.on("group-call-ready", ({ to, from }) => {
+    const toSocketId = userSocketMap[to];
+    if (toSocketId) io.to(toSocketId).emit("group-call-ready", { from });
+  });
+
   socket.on("group-call-ended", async ({ groupId, callId }) => {
     try {
       const group = await Group.findById(groupId);
       if (group) {
         group.members.forEach((memberId) => {
           const sid = userSocketMap[memberId.toString()];
-          if (sid && sid !== socket.id) io.to(sid).emit("group-call-ended", { groupId, callId });
+          if (sid && sid !== socket.id) io.to(sid).emit("group-call-ended",{ groupId, callId });
         });
       }
     } catch {}
